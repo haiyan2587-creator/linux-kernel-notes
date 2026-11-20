@@ -249,8 +249,9 @@ kill %1 %2
 
 ## 10. 仍然没解决的
 
-- [ ] `update_deadline()` 推进 `deadline` 的完整公式，`slice_max` / `min_slice` / `max_slice` 的调整规则
-- [ ] `vlag` 的更新时机与 `avg_vruntime()` 的维护成本（这棵辅助树的开销是否在热路径上）
+- [x] `update_deadline()` 的截止期公式 → 见 [03-EEVDF-eligible-与-lag](./03-EEVDF-eligible-与-lag.md) 第 5 节
+- [x] `vlag` 的更新时机与 `avg_vruntime()` 的维护成本 → 同上，第 3、6 节
+- [ ] `slice_max` / `min_slice` / `max_slice` 的动态调整规则
 - [ ] 组调度（`CONFIG_FAIR_GROUP_SCHED`）下，`cfs_rq.load` 的层级聚合如何影响单任务实际份额
 - [ ] CFS 带宽控制（`cpu.max`）与 `vruntime` 记账的交互：被 throttle 期间 `vruntime` 是否继续增长
 

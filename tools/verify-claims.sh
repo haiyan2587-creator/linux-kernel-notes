@@ -81,6 +81,17 @@ check "EEVDF：截止期推进 update_deadline" kernel/sched/fair.c 'update_dead
 check "时间片基准 sched_base_slice" kernel/sched/fair.c 'sched_base_slice'
 echo
 
+echo "[01-调度] EEVDF：eligible 与 lag"
+check "lag 与虚拟滞后的定义注释" kernel/sched/fair.c 'lag_i = S - s_i'
+check "合格判据 entity_lag" kernel/sched/fair.c 'entity_lag'
+check "滞后守恒入队 PLACE_LAG" kernel/sched/fair.c 'PLACE_LAG'
+check "保护窗口 vprot" kernel/sched/fair.c 'vprot'
+check "增强树按 min_vruntime 剪枝" kernel/sched/fair.c 'se->min_vruntime'
+check "截止期公式 vd = ve + r/w" kernel/sched/fair.c 'vd_i = ve_i \+ r_i / w_i'
+check "RUN_TO_PARITY 特性" kernel/sched/fair.c 'RUN_TO_PARITY'
+check "PICK_BUDDY 特性" kernel/sched/fair.c 'PICK_BUDDY'
+echo
+
 echo "[版本判据] 当前源码属于哪一代"
 if grep -qE 'pick_eevdf' "$K/kernel/sched/fair.c" 2>/dev/null; then
 	printf '  --  EEVDF 时代：笔记第 0 节的勘误表适用\n'
