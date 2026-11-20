@@ -1,0 +1,19 @@
+# License
+
+本仓库的笔记内容（`*.md`）采用 **Creative Commons Attribution 4.0 International（CC BY 4.0）** 许可协议。
+
+协议全文：https://creativecommons.org/licenses/by/4.0/legalcode
+
+这意味着你可以自由地共享、转载、改编本仓库内容，包括商业用途，条件是注明出处并链接回本仓库。
+
+## 例外
+
+笔记中引用的 Linux 内核代码片段、函数名与注释，其版权属于 Linux 内核原作者，遵循内核原有许可（GPL-2.0），不受上述 CC BY 4.0 约束。引用仅用于技术说明。
+
+## 免责
+
+笔记为个人阅读记录，可能存在错误或与当前内核版本不符。请以源码为准，不构成任何形式的保证。
+
+---
+
+Copyright (c) 2026 haiyan2587-creator
