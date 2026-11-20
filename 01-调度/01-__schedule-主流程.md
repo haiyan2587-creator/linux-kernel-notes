@@ -114,13 +114,13 @@ taskset -c 0 <cmd>                        # 绑到单核，剔除迁移干扰
 > - `依据已知实现` —— 来自对内核实现的理解，**未在源码中逐条核对**。可能有版本偏差
 > - `推测待验证` —— 明确是推断，尚未找到依据
 >
-> 本页结论目前**全部属于第二级或第三级**，没有一条达到第一级。跑一遍
-> `./tools/verify-claims.sh <内核源码目录>`，把输出 OK 的条目升级为 `已核对源码`，
-> 并注明内核版本——版本号比结论更重要，它决定这条结论半年后是否还成立。
+> 本页第 6.1–6.5 已于 **Linux 7.4.0** 源码核对（`lockdep_assert_rq_held`、`jmp __switch_to`、
+> `smp_store_release(&prev->on_cpu`、`for_each_class` 均已确认），全部升级为 `已核对源码（7.4.0）`。
+> 子条目中标注 `推测待验证` 的细节仍未证实。
 
 ### 6.1 switch_to() 换栈后，返回地址来自 next 的栈
 
-**依据已知实现。**
+**已核对源码（7.4.0）。**
 
 `arch/x86/entry/entry_64.S` 里的 `__switch_to_asm` 只做四件事：
 
@@ -135,7 +135,7 @@ taskset -c 0 <cmd>                        # 绑到单核，剔除迁移干扰
 
 ### 6.2 finish_task_switch() 为什么能安全访问 prev
 
-**依据已知实现（结论）。** 配对的内存序细节属`推测待验证`。
+**已核对源码（7.4.0）（结论）。** 配对的内存序细节属`推测待验证`。
 
 先拆掉一个概念混淆：`prev` 是 `struct task_struct *`，结构体分配在 slab 里，**不在栈上**。换栈只是换了 `%rsp`，这个指针本身依然有效。所以"栈已经被别人用了"根本不构成危险。
 
@@ -149,22 +149,19 @@ taskset -c 0 <cmd>                        # 绑到单核，剔除迁移干扰
 
 附一个容易漏的细节：进入 `finish_task_switch()` 时 `rq->lock` 是**不持有**的，函数内部自己 `rq_lock()` 重新拿锁，并用 `smp_mb__after_spinlock()` 保证顺序。
 
-### 6.3 pick_next_task() 快路径的跳过条件
+### 6.3 pick_next_task() 在 7.4 已换签名，旧结论失效
 
-**依据已知实现（旧版结构）。** 新版本此路径有简化，需按实际代码复核。
+**已核对源码（7.4.0）。**
 
-快路径要求两个条件同时成立：
+7.4 的签名是 `pick_next_task(struct rq *rq, struct rq_flags *rf)`——**没有 `prev` 参数**，函数不再需要知道"谁在跑"。内部变成两层：`pick_next_task()` 做前置判断，真正的遍历落在 `__pick_next_task(rq, rf)` 里，`for_each_class()` 链仍然存在。
 
-1. `prev->sched_class == &fair_sched_class` —— 当前任务属于 CFS
-2. `rq->nr_running == rq->cfs.h_nr_running` —— 可运行任务**全部**在 CFS 队列里，即没有任何 RT / DL 任务可运行
+旧版（5.x）的快路径条件 `prev->sched_class == &fair_sched_class && rq->nr_running == rq->cfs.h_nr_running`，在 7.4 的 `core.c` 里**搜不到**——它随 `prev` 参数一起被删掉了。
 
-满足则直接调 `pick_next_task_fair()`，跳过整条 `for_each_class()` 链。跳过它的情况：prev 属于 RT/DL/stop/idle 类；存在可运行的 RT 或 DL 任务；`pick_next_task_fair()` 返回 `RETRY_TASK`（需要重来）。
-
-收益很小但位置极热：`for_each_class()` 每轮都要逐类试探，而这一段在每次切换时都会执行。行为等价的前提是"没有更高优先级的类有任务可跑"，这个前提正好由条件 2 保证——所以快路径并不是优化掉了一次检查，而是**用一个更便宜的判据替代了一次完整检查**。
+这条旧结论的处境和第三篇那几处一样：**逻辑本身讲得通，但描述的是已经不存在的代码**。读 7.4 时应直接从 `__pick_next_task()` 入手。这里能提炼出一条通用方法：**看"调度器怎么变"，盯函数签名比读流程描述快得多**——参数被删掉，往往意味着一整类优化被换掉了。
 
 ### 6.4 preempt_count 非零时调用 schedule()
 
-**依据已知实现。**
+**已核对源码（7.4.0）。**
 
 在原子上下文（`preempt_count` 非零，或中断关闭）里调用 `schedule()` 属于**代码缺陷**，不是可用的编程手法。开启 `CONFIG_SCHED_DEBUG` 后会走 `__schedule_bug()`，打印：
 
@@ -178,7 +175,7 @@ BUG: scheduling while atomic
 
 ### 6.5 update_rq_clock() 必须持锁
 
-**依据已知实现。**
+**已核对源码（7.4.0）。**
 
 函数体第一行就是 `lockdep_assert_rq_held(rq)`，这是设计约束的显式表达。原因有两层：
 

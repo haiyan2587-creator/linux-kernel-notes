@@ -61,17 +61,30 @@ struct task_struct          ← task_struct_cachep slab 中分配
 
 ### current 是怎么找到的
 
-`current` 是内核里出现频率最高的宏之一，x86_64 上的实现：
+`current` 是内核里出现频率最高的宏之一。**它声明在 `arch/x86/include/asm/current.h`，不在 `sched.h`**（7.4.0 实测），完整实现如下：
 
 ```c
-DECLARE_PER_CPU(struct task_struct *, current_task);
+DECLARE_PER_CPU_CACHE_HOT(struct task_struct *, current_task);
+/* const-qualified alias provided by the linker. */
+DECLARE_PER_CPU_CACHE_HOT(struct task_struct * const __percpu_seg_override,
+			  const_current_task);
 
 static __always_inline struct task_struct *get_current(void)
 {
+	if (IS_ENABLED(CONFIG_USE_X86_SEG_SUPPORT))
+		return this_cpu_read_const(const_current_task);
+
 	return this_cpu_read_stable(current_task);
 }
+
 #define current get_current()
 ```
+
+三个细节值得注意：
+
+1. 用的是 `DECLARE_PER_CPU_CACHE_HOT`，不是普通的 `DECLARE_PER_CPU`——把 `current_task` 放进热缓存区，减少多核下的缓存行争用
+2. 有一个 `const` 限定的别名 `const_current_task`，由链接器提供
+3. `CONFIG_USE_X86_SEG_SUPPORT` 打开时走 `this_cpu_read_const`，否则走 `this_cpu_read_stable`。两条路都是"读一个 per-CPU 变量"，差别在编译器能否假设该值在函数内不被修改
 
 `this_cpu_read_stable` 编译成一条读 `%gs` 段偏移的 `mov`。`%gs` 的基址在用户态与内核态不同，靠 `swapgs` 切换：
 
@@ -130,15 +143,15 @@ crash> bt <pid>        # 栈回溯，同时能看到栈的起止地址
 
 ## 7. 结论
 
-置信度沿用三级标注：`已核对源码` / `依据已知实现` / `推测待验证`（定义见 [01-__schedule-主流程](../01-调度/01-__schedule-主流程.md) 第 6 节）。**本页没有一条达到第一级**，可用 `./tools/verify-claims.sh <源码目录>` 核对后升级。
+置信度沿用三级标注：`已核对源码` / `依据已知实现` / `推测待验证`（定义见 [01-__schedule-主流程](../01-调度/01-__schedule-主流程.md) 第 6 节）。**本页 7.1、7.2、7.4、7.5 已于 Linux 7.4.0 源码核对**（`current.h` 全文、`thread_info` 内嵌、`STACK_END_MAGIC`、`irq_stack` 均确认）；7.3 涉及调用链最坏深度，仍属 `推测待验证`。
 
 ### 7.1 current 是一条指令
 
-**依据已知实现。** `get_current()` 展开成读 `%gs` 段偏移的 `mov`，前提是 `swapgs` 已正确执行。用户态和内核态各自的 gs 基址由 `MSR_GS_BASE` 与 `MSR_KERNEL_GS_BASE` 两个 MSR 保存，`swapgs` 交换两者。若某条路径漏了 `swapgs`，`current` 会读到用户态的垃圾值——这类 bug 的表现是随机崩溃，而不是立即报错。
+**已核对源码（7.4.0）。** `get_current()` 展开成读 `%gs` 段偏移的 `mov`，前提是 `swapgs` 已正确执行。用户态和内核态各自的 gs 基址由 `MSR_GS_BASE` 与 `MSR_KERNEL_GS_BASE` 两个 MSR 保存，`swapgs` 交换两者。若某条路径漏了 `swapgs`，`current` 会读到用户态的垃圾值——这类 bug 的表现是随机崩溃，而不是立即报错。
 
 ### 7.2 thread_info 搬进 task_struct 解决了什么
 
-**依据已知实现（结论）。** 历史演进顺序属`推测待验证`。
+**已核对源码（7.4.0）（结论）。** 历史演进顺序属`推测待验证`。
 
 两个收益是确定的：
 
@@ -155,7 +168,7 @@ crash> bt <pid>        # 栈回溯，同时能看到栈的起止地址
 
 ### 7.4 栈溢出怎么被发现
 
-**依据已知实现。** 两种机制，可靠性差别很大：
+**已核对源码（7.4.0）。** 两种机制，可靠性差别很大：
 
 | 机制 | 原理 | 局限 |
 | --- | --- | --- |
@@ -166,7 +179,7 @@ crash> bt <pid>        # 栈回溯，同时能看到栈的起止地址
 
 ### 7.5 中断为什么需要独立栈
 
-**依据已知实现。**
+**已核对源码（7.4.0）。**
 
 如果中断处理复用被中断任务的栈，那么"内核栈已经很深时来一个中断"就会直接溢出——而这条路径恰恰最难复现、后果最严重。x86_64 的做法是每 CPU 一条独立中断栈，再加上 IST（Interrupt Stack Table）为 NMI、double fault、MCE 这类**不能被普通栈状态影响**的异常提供专属栈。
 

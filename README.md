@@ -18,7 +18,7 @@
 | `02-内存管理/` | 物理页分配、slab、缺页异常、页面回收 | 未开始 |
 | `03-VFS/` | inode / dentry / file / superblock | 未开始 |
 | `99-模板/` | 笔记模板，新笔记从这里复制 | — |
-| `tools/` | `verify-claims.sh`，核对笔记断言与真实源码是否一致 | — |
+| `tools/` | `verify-claims.sh` 核对断言与源码、`check-links.sh` 检查相对链接 | — |
 
 目录随阅读推进新建，不预先铺空文件夹。
 
