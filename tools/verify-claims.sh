@@ -101,6 +101,7 @@ check "WF_SYNC 阈值判断 preempt_sync" kernel/sched/fair.c 'preempt_sync'
 check "懒重调度 resched_curr_lazy" kernel/sched/core.c 'resched_curr_lazy'
 check "sched_delayed 排除判据" kernel/sched/fair.c 'sched_delayed'
 check "rq->donor 调度上下文字段" kernel/sched/sched.h 'donor;.*Scheduling context'
+check "挑选外层封装 pick_next_entity" kernel/sched/fair.c 'pick_next_entity\(struct rq \*rq, bool protect\)'
 echo
 
 echo "[版本判据] 当前源码属于哪一代"

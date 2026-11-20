@@ -133,6 +133,8 @@ return true;    /* 时间片用完，该重调度了 */
 
 ## 6. pick_eevdf 怎么在树上找
 
+> **先分清两层**：`pick_eevdf(cfs_rq, protect)` 只做挑选；实际调用它的是 `pick_next_entity(rq, protect)`（`fair.c` 约 6694 行），后者挑出实体后还要处置 `sched_delayed`——若被选中的实体处于延迟出队状态，会执行 `__dequeue_task(rq, task_of(se), DEQUEUE_SLEEP | DEQUEUE_DELAYED)`，并且此后**不能再引用 `se`**（注释指向 `__block_task()`）。所以"挑出来"和"挑完怎么处置"是两步。
+
 ### 增强红黑树
 
 第三篇说过树按 `deadline` 排序。这里补上被省略的一半：**这棵树同时是一棵以 `vruntime` 为键的堆**，靠每个节点维护：
