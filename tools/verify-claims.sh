@@ -92,6 +92,17 @@ check "RUN_TO_PARITY 特性" kernel/sched/fair.c 'RUN_TO_PARITY'
 check "PICK_BUDDY 特性" kernel/sched/fair.c 'PICK_BUDDY'
 echo
 
+echo "[01-调度] 抢占与唤醒"
+check "接口改名为 wakeup_preempt" kernel/sched/sched.h 'wakeup_preempt\)'
+check "wakeup_preempt_fair 实现存在" kernel/sched/fair.c 'wakeup_preempt_fair'
+check "四档动作枚举 preempt_wakeup_action" kernel/sched/fair.c 'PREEMPT_WAKEUP_SHORT'
+check "buddy 提名 set_preempt_buddy" kernel/sched/fair.c 'set_preempt_buddy'
+check "WF_SYNC 阈值判断 preempt_sync" kernel/sched/fair.c 'preempt_sync'
+check "懒重调度 resched_curr_lazy" kernel/sched/core.c 'resched_curr_lazy'
+check "sched_delayed 排除判据" kernel/sched/fair.c 'sched_delayed'
+check "rq->donor 调度上下文字段" kernel/sched/sched.h 'donor;.*Scheduling context'
+echo
+
 echo "[版本判据] 当前源码属于哪一代"
 if grep -qE 'pick_eevdf' "$K/kernel/sched/fair.c" 2>/dev/null; then
 	printf '  --  EEVDF 时代：笔记第 0 节的勘误表适用\n'
@@ -102,6 +113,12 @@ if grep -qE 'pick_eevdf' "$K/kernel/sched/fair.c" 2>/dev/null; then
 	fi
 else
 	printf '  --  非 EEVDF 版本：勘误表不适用，旧版描述可能成立\n'
+fi
+
+if grep -qE 'check_preempt_curr' "$K/kernel/sched/sched.h" "$K/kernel/sched/fair.c" 2>/dev/null; then
+	printf '      抢占接口仍为 check_preempt_curr：属旧世代，第 04 篇的接口对照表不适用\n'
+else
+	printf '      抢占接口已改为 wakeup_preempt：第 04 篇的接口对照表适用\n'
 fi
 echo
 

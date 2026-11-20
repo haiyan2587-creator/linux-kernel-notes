@@ -13,8 +13,8 @@
 
 | 路径 | 内容 | 状态 |
 | --- | --- | --- |
-| `00-基础/` | 进程抽象：`task_struct`、内核栈、`current` | 进行中 |
-| `01-调度/` | 进程调度：调度类、CFS、负载均衡 | 进行中 |
+| `00-基础/` | 进程抽象：`task_struct`、内核栈、`current` | 已建立 1 篇 |
+| `01-调度/` | 进程调度：切换动作、CFS/EEVDF 判据、抢占与唤醒 | **主线闭环，4 篇** |
 | `02-内存管理/` | 物理页分配、slab、缺页异常、页面回收 | 未开始 |
 | `03-VFS/` | inode / dentry / file / superblock | 未开始 |
 | `99-模板/` | 笔记模板，新笔记从这里复制 | — |
@@ -35,6 +35,30 @@
 - [ ] VFS：路径查找、inode 缓存、dentry 缓存
 - [ ] 并发：spinlock、RCU、per-CPU 变量
 - [ ] 中断：上半部与下半部
+
+## 核对基准
+
+所有技术结论以 **Linux 7.4.0** 源码为基准，分三级标注：
+
+| 等级 | 含义 |
+| --- | --- |
+| `已核对源码（7.4.0）` | 在源码中确认过 |
+| `依据已知实现` | 有把握但未核对 |
+| `推测待验证` | 明确是推断 |
+
+复核方式：
+
+```bash
+# 只取需要的路径，约 21MB，不必下载整个仓库
+git clone --depth 1 --filter=blob:none --sparse git@github.com:torvalds/linux.git ~/linux
+git -C ~/linux sparse-checkout set --no-cone /Makefile /kernel/sched/ /kernel/fork.c \
+    /include/linux/sched.h /include/linux/thread_info.h /arch/x86/entry/ /arch/x86/include/asm/
+
+./tools/verify-claims.sh ~/linux    # 断言是否与源码一致
+./tools/check-links.sh              # 笔记间链接是否有效
+```
+
+**版本号比结论更重要**——同一个函数在不同版本里可能被改名或删掉。本仓库的调度笔记因此特意标出了多处"5.x 有、7.4 无"的符号，避免按旧资料白费时间。
 
 ## 笔记约定
 
